@@ -1,0 +1,362 @@
+[
+  {
+    "id": "tech-001",
+    "title": "Python Programming Fundamentals",
+    "skill_taught": "Python",
+    "level": "beginner",
+    "duration_minutes": 45,
+    "prerequisites": [],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-002",
+    "title": "Intermediate Python & Object-Oriented Design",
+    "skill_taught": "Python",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["tech-001"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-003",
+    "title": "Advanced Python & Concurrency",
+    "skill_taught": "Python",
+    "level": "advanced",
+    "duration_minutes": 90,
+    "prerequisites": ["tech-002"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-004",
+    "title": "SQL Fundamentals & Relational Modeling",
+    "skill_taught": "SQL",
+    "level": "beginner",
+    "duration_minutes": 45,
+    "prerequisites": [],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-005",
+    "title": "Database Indexing & Query Optimization",
+    "skill_taught": "SQL",
+    "level": "intermediate",
+    "duration_minutes": 75,
+    "prerequisites": ["tech-004"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-006",
+    "title": "Warehouse Data Architecture Design",
+    "skill_taught": "Data Architecture",
+    "level": "advanced",
+    "duration_minutes": 120,
+    "prerequisites": ["tech-005"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-007",
+    "title": "Docker Containerisation Basics",
+    "skill_taught": "Docker",
+    "level": "beginner",
+    "duration_minutes": 30,
+    "prerequisites": [],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-008",
+    "title": "Kubernetes Orchestration Fundamentals",
+    "skill_taught": "Kubernetes",
+    "level": "intermediate",
+    "duration_minutes": 90,
+    "prerequisites": ["tech-007"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-009",
+    "title": "Git Version Control & Workflows",
+    "skill_taught": "Git",
+    "level": "beginner",
+    "duration_minutes": 40,
+    "prerequisites": [],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-010",
+    "title": "CI/CD Pipeline Design",
+    "skill_taught": "CI/CD",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["tech-009", "tech-007"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-011",
+    "title": "React JS Core Concepts",
+    "skill_taught": "React",
+    "level": "beginner",
+    "duration_minutes": 60,
+    "prerequisites": [],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-012",
+    "title": "State Management & React Context",
+    "skill_taught": "React",
+    "level": "intermediate",
+    "duration_minutes": 45,
+    "prerequisites": ["tech-011"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-013",
+    "title": "Building APIs with FastAPI",
+    "skill_taught": "FastAPI",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["tech-001"],
+    "domain": "technical"
+  },
+  {
+    "id": "tech-014",
+    "title": "Vector Databases and RAG",
+    "skill_taught": "Vector DB",
+    "level": "advanced",
+    "duration_minutes": 90,
+    "prerequisites": ["tech-002"],
+    "domain": "technical"
+  },
+  {
+    "id": "op-001",
+    "title": "Warehouse Operations 101",
+    "skill_taught": "Warehouse Operations",
+    "level": "beginner",
+    "duration_minutes": 40,
+    "prerequisites": [],
+    "domain": "operational"
+  },
+  {
+    "id": "op-002",
+    "title": "Inventory Management & Forecasting",
+    "skill_taught": "Inventory Management",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["op-001"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-003",
+    "title": "Supply Chain Logistics Strategy",
+    "skill_taught": "Supply Chain Logistics",
+    "level": "advanced",
+    "duration_minutes": 120,
+    "prerequisites": ["op-002"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-004",
+    "title": "Vendor Relationships & Negotiation",
+    "skill_taught": "Vendor Negotiation",
+    "level": "intermediate",
+    "duration_minutes": 45,
+    "prerequisites": [],
+    "domain": "operational"
+  },
+  {
+    "id": "op-005",
+    "title": "Quality Control Protocols",
+    "skill_taught": "Quality Control",
+    "level": "beginner",
+    "duration_minutes": 30,
+    "prerequisites": [],
+    "domain": "operational"
+  },
+  {
+    "id": "op-006",
+    "title": "Six Sigma Process Optimization",
+    "skill_taught": "Process Optimization",
+    "level": "advanced",
+    "duration_minutes": 90,
+    "prerequisites": ["op-005"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-007",
+    "title": "Safety & Compliance Standards",
+    "skill_taught": "Compliance",
+    "level": "beginner",
+    "duration_minutes": 45,
+    "prerequisites": [],
+    "domain": "operational"
+  },
+  {
+    "id": "op-008",
+    "title": "Incident Response and Escalation",
+    "skill_taught": "Escalation Handling",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["op-007"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-009",
+    "title": "Resource Allocation Planning",
+    "skill_taught": "Resource Allocation",
+    "level": "advanced",
+    "duration_minutes": 60,
+    "prerequisites": ["op-002"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-010",
+    "title": "Fleet Management Dynamics",
+    "skill_taught": "Fleet Management",
+    "level": "intermediate",
+    "duration_minutes": 45,
+    "prerequisites": ["op-001"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-011",
+    "title": "Data-Driven Dispatching",
+    "skill_taught": "Dispatching",
+    "level": "advanced",
+    "duration_minutes": 60,
+    "prerequisites": ["op-010"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-012",
+    "title": "Cold Chain Logistics",
+    "skill_taught": "Cold Chain",
+    "level": "advanced",
+    "duration_minutes": 75,
+    "prerequisites": ["op-003"],
+    "domain": "operational"
+  },
+  {
+    "id": "op-013",
+    "title": "Audit Preparation Strategies",
+    "skill_taught": "Auditing",
+    "level": "intermediate",
+    "duration_minutes": 45,
+    "prerequisites": ["op-007"],
+    "domain": "operational"
+  },
+  {
+    "id": "kw-001",
+    "title": "Effective Written Communication",
+    "skill_taught": "Written Communication",
+    "level": "beginner",
+    "duration_minutes": 30,
+    "prerequisites": [],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-002",
+    "title": "Stakeholder Management & Alignment",
+    "skill_taught": "Stakeholder Management",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["kw-001"],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-003",
+    "title": "Executive Presentation Design",
+    "skill_taught": "Presentations",
+    "level": "advanced",
+    "duration_minutes": 90,
+    "prerequisites": ["kw-002"],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-004",
+    "title": "Agile Project Prioritization",
+    "skill_taught": "Project Prioritization",
+    "level": "intermediate",
+    "duration_minutes": 45,
+    "prerequisites": [],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-005",
+    "title": "Strategic Roadmap Planning",
+    "skill_taught": "Roadmapping",
+    "level": "advanced",
+    "duration_minutes": 75,
+    "prerequisites": ["kw-004"],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-006",
+    "title": "Policy Interpretation Basics",
+    "skill_taught": "Policy Interpretation",
+    "level": "beginner",
+    "duration_minutes": 40,
+    "prerequisites": [],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-007",
+    "title": "Cross-Functional Collaboration",
+    "skill_taught": "Collaboration",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": ["kw-001"],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-008",
+    "title": "Conflict Resolution in Teams",
+    "skill_taught": "Conflict Resolution",
+    "level": "advanced",
+    "duration_minutes": 60,
+    "prerequisites": ["kw-007"],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-009",
+    "title": "Time Management & Deep Work",
+    "skill_taught": "Time Management",
+    "level": "beginner",
+    "duration_minutes": 30,
+    "prerequisites": [],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-010",
+    "title": "Change Management Principles",
+    "skill_taught": "Change Management",
+    "level": "advanced",
+    "duration_minutes": 90,
+    "prerequisites": ["kw-002", "kw-005"],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-011",
+    "title": "Data Privacy & InfoSec 101",
+    "skill_taught": "Information Security",
+    "level": "beginner",
+    "duration_minutes": 45,
+    "prerequisites": [],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-012",
+    "title": "Customer Empathy Interviewing",
+    "skill_taught": "User Research",
+    "level": "intermediate",
+    "duration_minutes": 60,
+    "prerequisites": [],
+    "domain": "knowledge"
+  },
+  {
+    "id": "kw-013",
+    "title": "Product Metrics and KPI Definition",
+    "skill_taught": "Product Metrics",
+    "level": "intermediate",
+    "duration_minutes": 45,
+    "prerequisites": ["kw-004"],
+    "domain": "knowledge"
+  }
+]
