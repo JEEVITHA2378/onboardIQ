@@ -117,8 +117,7 @@ export default function Analysing() {
                 skills_proven: [],
                 skill_gaps: [],
                 time_saved_hours: 142,
-                status: 'completed',
-                updated_at: new Date().toISOString()
+                status: 'completed'
               });
             if (error) console.error('Supabase save error:', error);
           } catch (dbErr) {

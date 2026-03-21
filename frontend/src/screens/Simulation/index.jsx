@@ -89,14 +89,12 @@ export default function Simulation() {
             id: sessionId || "demo-session",
             user_id: user.id,
             status: 'completed',
-            telemetry_log: telemetryLog,
             job_readiness_score: response?.data?.readiness_score || 72,
             skills_proven: response?.data?.skills_proven || [],
             skill_gaps: response?.data?.skill_gaps || [],
             learning_pathway: response?.data?.pathway || [],
             reasoning_trace: response?.data?.reasoning_trace || [],
-            time_saved_hours: response?.data?.time_saved_hours || 0,
-            updated_at: new Date().toISOString()
+            time_saved_hours: response?.data?.time_saved_hours || 0
           });
 
         if (error) {

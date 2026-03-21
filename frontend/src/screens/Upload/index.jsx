@@ -60,8 +60,7 @@ export default function Upload() {
           role_title: extractedData.role_title || 'Software Engineer',
           role_category: extractedData.role_category || 'technical',
           status: 'in_progress',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         });
 
       if (error) {
