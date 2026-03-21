@@ -66,48 +66,56 @@ export default function Roadmap() {
   const [activeView, setActiveView] = useState('Timeline View')
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setLoading(false)
+      setError('timeout')
+    }, 5000)
+
     const fetchRoadmap = async () => {
-      if (!user?.id) {
-        setLoading(false)
-        return
-      }
+      if (!user?.id) return
       try {
-        // Get latest session (prefer completed, fallback to any)
-        let query = supabase
+        const { data, error } = await supabase
           .from('onboarding_sessions')
           .select('*')
           .eq('user_id', user.id)
-
-        if (sessionId) {
-          query = query.eq('id', sessionId)
-        }
-
-        const { data, error } = await query
           .order('created_at', { ascending: false })
           .limit(1)
 
-        if (error) throw error
+        clearTimeout(timeout)
 
+        if (error) throw error
         if (!data || data.length === 0) {
-          setError('No roadmap found. Please complete an assessment first.')
+          setError('no_session')
           setLoading(false)
           return
         }
 
-        const latestSession = data[0]
-        console.log('Roadmap session loaded:', latestSession.id, latestSession.status)
-        setSession(latestSession)
-        setPathway(latestSession.learning_pathway || [])
+        const latest = data[0]
+        console.log('Roadmap loaded:', latest.id, latest.status)
+        setSession(latest)
+        setPathway(latest.learning_pathway || [])
         setLoading(false)
 
       } catch (err) {
+        clearTimeout(timeout)
         console.error('Roadmap fetch error:', err)
-        setError('Failed to load roadmap. Please try again.')
+        setError('fetch_failed')
         setLoading(false)
       }
     }
-    fetchRoadmap()
-  }, [user?.id, sessionId])
+
+    if (user?.id) {
+      fetchRoadmap()
+    } else {
+      const retry = setTimeout(() => fetchRoadmap(), 2000)
+      return () => {
+        clearTimeout(timeout)
+        clearTimeout(retry)
+      }
+    }
+
+    return () => clearTimeout(timeout)
+  }, [user?.id])
 
   // Loading state
   if (loading) {
