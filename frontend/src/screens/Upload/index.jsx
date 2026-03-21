@@ -7,7 +7,6 @@ import { useAuth } from '../../context/AuthContext';
 import { ingestResume, getSimulationTasks } from '../../services/api';
 import { useOnboard } from '../../context/OnboardContext';
 import { FileText, Briefcase, CheckCircle2 } from 'lucide-react';
-import { FileText, Briefcase, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
 
