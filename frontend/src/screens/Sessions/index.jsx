@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Navbar } from '../../components/Navbar'
 import { ROUTES } from '../../constants/routes'
+import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabaseClient'
 
 const ScoreRing = ({ score }) => {
   const size = 80
@@ -69,30 +71,42 @@ const ScoreRing = ({ score }) => {
 
 export default function Sessions() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [sessions, setSessions] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const sessions = [
-    { 
-      id: '1', 
-      role_title: 'Staff Software Engineer', 
-      created_at: '2026-03-20T14:30:00Z', 
-      status: 'completed', 
-      job_readiness_score: 82 
-    },
-    { 
-      id: '2', 
-      role_title: 'Data Scientist II', 
-      created_at: '2026-02-12T09:00:00Z', 
-      status: 'completed', 
-      job_readiness_score: 94 
-    },
-    { 
-      id: '3', 
-      role_title: 'Frontend Lead', 
-      created_at: '2025-11-05T12:00:00Z', 
-      status: 'in_progress', 
-      job_readiness_score: 45 
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user) return
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('onboarding_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        setSessions(data || [])
+      } catch (err) {
+        console.error('Failed to fetch sessions:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+    fetchSessions()
+  }, [user])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary-dark border-t-transparent rounded-full animate-spin"></div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">

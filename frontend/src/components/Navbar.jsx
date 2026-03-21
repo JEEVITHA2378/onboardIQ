@@ -18,6 +18,7 @@ export const Navbar = () => {
 
   const navLinks = [
     { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Upload', path: '/upload' },
     { label: 'Roadmap', path: '/roadmap' },
     { label: 'Sessions', path: '/sessions' },
     { label: 'Simulation', path: '/simulation' },
@@ -66,17 +67,26 @@ export const Navbar = () => {
             style={({ isActive }) => ({
               fontFamily: 'DM Sans, sans-serif',
               fontSize: '14px',
-              fontWeight: isActive ? '600' : '400',
+              fontWeight: isActive ? '700' : '400',
               color: isActive ? '#0f172a' : '#64748b',
               textDecoration: 'none',
               padding: '6px 16px',
               borderRadius: '8px',
               background: isActive ? '#f1f5f9' : 'transparent',
-              border: isActive
-                ? '1px solid #e2e8f0' : '1px solid transparent',
               transition: 'all 200ms',
               whiteSpace: 'nowrap'
             })}
+            className={({ isActive }) => isActive ? 'active-nav-link' : 'nav-link'}
+            onMouseEnter={e => {
+              if (!e.currentTarget.classList.contains('active-nav-link')) {
+                e.currentTarget.style.background = '#f8fafc';
+              }
+            }}
+            onMouseLeave={e => {
+              if (!e.currentTarget.classList.contains('active-nav-link')) {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             {link.label}
           </NavLink>

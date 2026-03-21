@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Navbar } from '../../components/Navbar';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
@@ -10,15 +10,47 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../../components/Button';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { pathway } = useOnboard();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('session');
+  
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [expandedTrace, setExpandedTrace] = useState({});
   const [downloading, setDownloading] = useState(false);
   const dashboardRef = useRef(null);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      if (!user || !sessionId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('onboarding_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+        setDashboardData(data);
+      } catch (err) {
+        console.error('Dashboard load failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, [user, sessionId]);
 
   const mockData = {
     readiness: 72,

@@ -9,14 +9,20 @@ from models.database import get_from_store, query_store
 router = APIRouter()
 
 @router.get("/dashboard/{session_id}", response_model=DashboardResponse)
-async def get_dashboard(session_id: str):
-    print(f"Fetching dashboard for session: {session_id}")
-    session = get_from_store("onboarding_sessions", session_id)
+async def get_dashboard(session_id: str, user_id: str):
+    print(f"Fetching dashboard for session: {session_id} and user: {user_id}")
+    
+    # Always filter by both session_id AND user_id for security
+    sessions = query_store("onboarding_sessions", {"id": session_id, "user_id": user_id})
+    session = sessions[0] if sessions else None
     
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(
+            status_code=404, 
+            detail="Session not found or access denied"
+        )
         
-    results = query_store("simulation_results", {"session_id": session_id})
+    results = query_store("simulation_results", {"session_id": session_id, "user_id": user_id})
     
     return DashboardResponse(
         session_id=session_id,
@@ -28,7 +34,7 @@ async def get_dashboard(session_id: str):
         time_saved_hours=session.get("time_saved_hours", 0),
         total_modules=40,
         modules_skipped=40 - len(session.get("learning_pathway", [])),
-        days_to_ready=max(1, len(session.get("learning_pathway", [])) * 2), # Assuming 1 module per 2 days
+        days_to_ready=max(1, len(session.get("learning_pathway", [])) * 2),
         simulation_results=results
     )
 

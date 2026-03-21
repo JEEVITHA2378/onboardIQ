@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Navbar } from '../../components/Navbar';
 import { ROUTES } from '../../constants/routes';
 import { useOnboard } from '../../context/OnboardContext';
+import { useAuth } from '../../context/AuthContext';
 import ReactFlow, { Background, Controls, MarkerType } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 
 const ScoreRing = ({ score }) => {
   const size = 52
@@ -105,12 +107,44 @@ const ScoreRing = ({ score }) => {
 
 export default function Roadmap() {
   const { pathway } = useOnboard();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('session');
+  
+  const [sessionData, setSessionData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState('Graph View');
   const [selectedNode, setSelectedNode] = useState(null);
   const [expandedItems, setExpandedItems] = useState({});
 
-  const data = pathway || {
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      if (!user || !sessionId) {
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('onboarding_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
+        setSessionData(data);
+      } catch (err) {
+        console.error('Roadmap load failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSessionData();
+  }, [user, sessionId]);
+
+  const data = sessionData || pathway || {
     modules: [
       { id: "mod1", title: "Advanced Python Algorithms", duration_minutes: 60, level: "advanced", skill_taught: "Python" },
       { id: "mod2", title: "System Design for APIs", duration_minutes: 45, level: "intermediate", skill_taught: "System Design" }
@@ -124,9 +158,20 @@ export default function Roadmap() {
 
   const [score, setScore] = useState(0);
   useEffect(() => {
-    let timer = setTimeout(() => setScore(68), 100);
+    let timer = setTimeout(() => setScore(data?.job_readiness_score || 68), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [data]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary-dark border-t-transparent rounded-full animate-spin"></div>
+        </main>
+      </div>
+    );
+  }
 
   const { nodes, edges } = useMemo(() => {
     const nds = [];
