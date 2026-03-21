@@ -13,7 +13,12 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       setLoading(true)
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const getSessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Supabase getSession timeout')), 5000)
+        )
+        
+        const { data: { session }, error } = await Promise.race([getSessionPromise, timeoutPromise])
 
         if (error || !session) {
           setUser(null)
@@ -45,6 +50,9 @@ export const AuthProvider = ({ children }) => {
         setSession(session)
 
       } catch (err) {
+        console.error('Supabase init error:', err)
+        // Ensure state is cleared aggressively on error
+        localStorage.clear() 
         setUser(null)
         setProfile(null)
         setSession(null)
@@ -77,20 +85,55 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Mock login for demo purposes
-  const login = async (email, password) => {
-    setUser({ id: '1', email });
-    return { data: { user: { id: '1', email } }, error: null };
+  const signup = async (email, password, metadata = {}) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata
+        }
+      });
+      if (error) throw error;
+      
+      // Profile creation is typically handled via Supabase triggers,
+      // but we can add a manual check or creation if needed.
+      // For this app, let's assume a trigger handles it or we do it here.
+      if (data.user) {
+         await supabase.from('profiles').insert([
+          { id: data.user.id, email: data.user.email, full_name: metadata.full_name }
+        ]);
+      }
+      
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
   };
 
-  const signup = async (email, password) => {
-    setUser({ id: '1', email });
-    return { data: { user: { id: '1', email } }, error: null };
+  const login = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
   };
 
   const logout = async () => {
-    setUser(null);
-    return { error: null };
+    try {
+      const { error } = await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      return { error };
+    } catch (error) {
+      return { error };
+    }
   };
 
   return (

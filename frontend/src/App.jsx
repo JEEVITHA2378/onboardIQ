@@ -1,94 +1,102 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect } from 'react';
-import { supabase } from './lib/supabaseClient';
-
-// Context Providers
-import { AuthProvider } from './context/AuthContext';
-import { OnboardProvider } from './context/OnboardContext';
-
-// Components
-import ProtectedRoute from './components/ProtectedRoute';
+import React, { Component } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import { OnboardProvider } from './context/OnboardContext'
+import ProtectedRoute from './components/ProtectedRoute'
 
 // Screens
-import Signup from './screens/Signup';
-import Login from './screens/Login';
-import Upload from './screens/Upload';
-import Simulation from './screens/Simulation';
-import Analysing from './screens/Analysing';
-import Roadmap from './screens/Roadmap';
-import Dashboard from './screens/Dashboard';
-import Sessions from './screens/Sessions';
+import Signup from './screens/Signup'
+import Login from './screens/Login'
+import Upload from './screens/Upload'
+import Simulation from './screens/Simulation'
+import Analysing from './screens/Analysing'
+import Roadmap from './screens/Roadmap'
+import Dashboard from './screens/Dashboard'
+import Sessions from './screens/Sessions'
 
-// Constants
-import { ROUTES } from './constants/routes';
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
 
-// Page Transition Wrapper
-const PageWrapper = ({ children }) => {
-  const location = useLocation();
-  return (
-    <motion.div
-      key={location.pathname}
-      initial={{ x: '100%', opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: '-10%', opacity: 0 }}
-      transition={{ ease: "circOut", duration: 0.35 }}
-      className="w-full min-h-screen bg-transparent absolute top-0 left-0"
-    >
-      {children}
-    </motion.div>
-  );
-};
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
 
-function AnimatedRoutes() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        navigate('/dashboard')
-      }
-    })
-
-    return () => {
-      subscription?.unsubscribe()
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'sans-serif',
+          gap: '16px',
+          padding: '32px'
+        }}>
+          <h1 style={{ fontSize: '24px', color: '#0f172a' }}>
+            Something went wrong
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '14px' }}>
+            {this.state.error?.message}
+          </p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            style={{
+              background: '#0f172a',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 24px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Go to Login
+          </button>
+        </div>
+      )
     }
-  }, [navigate])
-  
-  return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background">
-      <AnimatePresence mode="popLayout" initial={false}>
-        <Routes location={location} key={location.pathname}>
-          {/* Public Routes */}
-          <Route path="/" element={<Navigate to={ROUTES.LOGIN} replace />} />
-          <Route path={ROUTES.SIGNUP} element={<PageWrapper><Signup /></PageWrapper>} />
-          <Route path={ROUTES.LOGIN} element={<PageWrapper><Login /></PageWrapper>} />
-
-          {/* Protected Routes */}
-          <Route path={ROUTES.UPLOAD} element={<ProtectedRoute><PageWrapper><Upload /></PageWrapper></ProtectedRoute>} />
-          <Route path={ROUTES.SIMULATION} element={<ProtectedRoute><PageWrapper><Simulation /></PageWrapper></ProtectedRoute>} />
-          <Route path={ROUTES.ANALYSING} element={<ProtectedRoute><PageWrapper><Analysing /></PageWrapper></ProtectedRoute>} />
-          <Route path={ROUTES.ROADMAP} element={<ProtectedRoute><PageWrapper><Roadmap /></PageWrapper></ProtectedRoute>} />
-          <Route path={ROUTES.DASHBOARD} element={<ProtectedRoute><PageWrapper><Dashboard /></PageWrapper></ProtectedRoute>} />
-          <Route path={ROUTES.SESSIONS} element={<ProtectedRoute><PageWrapper><Sessions /></PageWrapper></ProtectedRoute>} />
-          
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to={ROUTES.LOGIN} replace />} />
-        </Routes>
-      </AnimatePresence>
-    </div>
-  );
+    return this.props.children
+  }
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <OnboardProvider>
-        <Router>
-          <AnimatedRoutes />
-        </Router>
-      </OnboardProvider>
-    </AuthProvider>
-  );
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <OnboardProvider>
+            <Routes>
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/upload" element={
+                <ProtectedRoute><Upload /></ProtectedRoute>
+              } />
+              <Route path="/simulation" element={
+                <ProtectedRoute><Simulation /></ProtectedRoute>
+              } />
+              <Route path="/analysing" element={
+                <ProtectedRoute><Analysing /></ProtectedRoute>
+              } />
+              <Route path="/roadmap" element={
+                <ProtectedRoute><Roadmap /></ProtectedRoute>
+              } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute><Dashboard /></ProtectedRoute>
+              } />
+              <Route path="/sessions" element={
+                <ProtectedRoute><Sessions /></ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </OnboardProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
+  )
 }
