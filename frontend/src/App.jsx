@@ -8,7 +8,7 @@ import { AuthProvider } from './context/AuthContext';
 import { OnboardProvider } from './context/OnboardContext';
 
 // Components
-import { ProtectedRoute } from './components/ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Screens
 import Signup from './screens/Signup';

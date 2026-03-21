@@ -19,25 +19,79 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (resetMode) {
-      setSuccess("Reset link sent to " + email);
-      return;
-    }
+    e.preventDefault()
+    setError('')
+    setLoading(true)
 
-    setError('');
-    setLoading(true);
-    
     try {
-      const { error: signInError } = await login(email, password);
-      // For demo we mock auth to /upload, normally would throw signInError
-      navigate(ROUTES.UPLOAD);
+      // Validate fields not empty
+      if (!email || !password) {
+        setError('Email and password are required')
+        setLoading(false)
+        return
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        setError('Please enter a valid email address')
+        setLoading(false)
+        return
+      }
+
+      // Attempt Supabase login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
+      })
+
+      // Handle Supabase errors
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please try again.')
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Please verify your email before signing in.')
+        } else if (error.message.includes('User not found')) {
+          setError('No account found with this email.')
+        } else {
+          setError(error.message || 'Sign in failed. Please try again.')
+        }
+        setLoading(false)
+        return
+      }
+
+      // Check if user session is valid
+      if (!data.session || !data.user) {
+        setError('Authentication failed. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Check if user exists in profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError || !profile) {
+        // User deleted from profiles — sign them out
+        await supabase.auth.signOut()
+        setError('Account not found. Please create a new account.')
+        setLoading(false)
+        return
+      }
+
+      // Success — navigate to dashboard
+      navigate('/dashboard')
+
     } catch (err) {
-      setError('Invalid credentials. Please try again.');
+      setError('Something went wrong. Please try again.')
+      setLoading(false)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true)
