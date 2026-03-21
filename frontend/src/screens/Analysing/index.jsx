@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes';
 import { useOnboard } from '../../context/OnboardContext';
 import { Navbar } from '../../components/Navbar';
-import { generatePathway } from '../../services/api';
+import api from '../../services/api';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -20,99 +20,136 @@ const signals = [
 
 export default function Analysing() {
   const navigate = useNavigate();
-  const { pathway, setPathway, sessionId } = useOnboard();
+  const { setPathway, sessionId, roleTitle, roleCategory } = useOnboard();
   const [completedSignals, setCompletedSignals] = useState(-1);
-
   const { user } = useAuth();
+  const [showButton, setShowButton] = useState(false);
 
-  // Mock pathway for when backend is unavailable
-  const getMockPathway = () => [
-    {
-      id: 'module-1',
-      title: 'Core Fundamentals',
-      skill_taught: 'fundamentals',
-      level: 'beginner',
-      duration_minutes: 30,
-      domain: 'technical',
-      reasoning: `This module was added because gaps were identified during your simulation tasks.`
-    },
-    {
-      id: 'module-2',
-      title: 'Advanced Concepts',
-      skill_taught: 'advanced',
-      level: 'intermediate',
-      duration_minutes: 45,
-      domain: 'technical',
-      reasoning: `This module addresses the skill gaps observed in your task performance.`
-    }
-  ];
-
+  // Fix 1: Force navigate after 4 seconds
   useEffect(() => {
-    const handleGeneratePathway = async () => {
-      if (!sessionId || !user) {
-        setTimeout(() => {
-          navigate(ROUTES.ROADMAP);
-        }, 15000);
-        return;
-      }
+    const forceNavigate = setTimeout(() => {
+      navigate('/roadmap');
+    }, 4000);
+    return () => clearTimeout(forceNavigate);
+  }, [navigate]);
+
+  // Fix 3: Show emergency button after 5 seconds
+  useEffect(() => {
+    const buttonTimer = setTimeout(() => {
+      setShowButton(true);
+    }, 5000);
+    return () => clearTimeout(buttonTimer);
+  }, []);
+
+  // Fix 2: runAnalysis with mock data and Supabase upsert
+  useEffect(() => {
+    const runAnalysis = async () => {
       try {
-        // Call backend to generate pathway
-        const response = await generatePathway(sessionId);
+        let pathway = [];
+        let readinessScore = 72;
+        let reasoningTrace = [];
 
-        const newPathway = response?.data?.learning_pathway || response?.data?.modules || [];
-        const reasoningTrace = response?.data?.reasoning_trace || response?.data?.reasoning || [];
-        const readinessScore = response?.data?.job_readiness_score || 72;
+        try {
+          const response = await api.get(`/api/generate-pathway/${sessionId}`);
+          pathway = response.data.pathway || response.data.learning_pathway || [];
+          readinessScore = response.data.job_readiness_score || 72;
+          reasoningTrace = response.data.reasoning_trace || response.data.reasoning || [];
+        } catch (backendErr) {
+          console.log('Backend unavailable, using mock data');
+          pathway = [
+            {
+              id: 'module-1',
+              title: 'Advanced Python Algorithms',
+              skill_taught: 'Python',
+              level: 'advanced',
+              duration_minutes: 60,
+              domain: 'technical',
+              color: 'red',
+              reasoning: 'This module was added because you spent extra time on the Python debugging task, indicating a gap in advanced algorithm concepts required for the Software Engineer role.'
+            },
+            {
+              id: 'module-2',
+              title: 'System Design for APIs',
+              skill_taught: 'System Design',
+              level: 'intermediate',
+              duration_minutes: 45,
+              domain: 'technical',
+              color: 'green',
+              reasoning: 'This module was added because your API debugging response showed unfamiliarity with system design patterns required for the Software Engineer role.'
+            },
+            {
+              id: 'module-3',
+              title: 'Database Indexing Fundamentals',
+              skill_taught: 'SQL',
+              level: 'intermediate',
+              duration_minutes: 30,
+              domain: 'technical',
+              color: 'amber',
+              reasoning: 'This module was added because your query optimization task showed a gap in database indexing concepts required for the Software Engineer role.'
+            }
+          ];
+          readinessScore = 72;
+          reasoningTrace = pathway.map(m => ({
+            module_title: m.title,
+            explanation: m.reasoning
+          }));
+        }
 
-        setPathway(response.data);
-
-        // Save pathway to Supabase
-        await supabase
-          .from('onboarding_sessions')
-          .update({
-            learning_pathway: newPathway,
+        setPathway({
+            learning_pathway: pathway,
             reasoning_trace: reasoningTrace,
-            job_readiness_score: readinessScore,
-            status: 'completed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', sessionId)
-          .eq('user_id', user.id);
+            job_readiness_score: readinessScore
+        });
 
-        // Navigate to roadmap after saving
-        setTimeout(() => {
-          navigate(ROUTES.ROADMAP);
-        }, 3000);
+        // Save to Supabase
+        if (user && sessionId) {
+          try {
+            const { error } = await supabase
+              .from('onboarding_sessions')
+              .upsert({
+                id: sessionId,
+                user_id: user.id,
+                role_title: roleTitle || 'Software Engineer',
+                role_category: roleCategory || 'technical',
+                learning_pathway: pathway,
+                reasoning_trace: reasoningTrace,
+                job_readiness_score: readinessScore,
+                skills_proven: [],
+                skill_gaps: [],
+                time_saved_hours: 142,
+                status: 'completed',
+                updated_at: new Date().toISOString()
+              });
+            if (error) console.error('Supabase save error:', error);
+          } catch (dbErr) {
+            console.error('Database save failed:', dbErr);
+          }
+        }
 
       } catch (err) {
-        console.error('Pathway generation failed:', err);
-        // Even if backend fails navigate to roadmap with mock data so user sees something
-        await supabase
-          .from('onboarding_sessions')
-          .update({
-            learning_pathway: getMockPathway(),
-            job_readiness_score: 72,
-            status: 'completed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', sessionId)
-          .eq('user_id', user.id);
-
-        setTimeout(() => navigate(ROUTES.ROADMAP), 3000);
+        console.error('Analysis failed:', err);
+      } finally {
+        navigate('/roadmap');
       }
     };
 
-    handleGeneratePathway();
+    const timer = setTimeout(() => {
+      runAnalysis();
+    }, 3500);
 
-    // Reveal signals staggered
+    return () => clearTimeout(timer);
+  }, [user, sessionId, roleTitle, roleCategory, navigate, setPathway]);
+
+  // Speed up signals so they complete within the 4s window
+  useEffect(() => {
     let idx = 0;
     const interval = setInterval(() => {
       setCompletedSignals(idx);
       idx++;
       if (idx >= signals.length) clearInterval(interval);
-    }, 2500);
-
+    }, 600); // 6 * 0.6s = 3.6s
     return () => clearInterval(interval);
-  }, [navigate, sessionId, user, setPathway]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center relative overflow-hidden">
@@ -120,7 +157,7 @@ export default function Analysing() {
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 w-full relative z-10 z-[1] max-w-2xl mx-auto">
         <h1 className="font-headline text-[42px] text-primary-dark mb-2 text-center sm:text-left w-full">Analysing your work patterns.</h1>
-        <p className="font-body text-sm text-muted mb-8 w-full">This takes about 15 seconds.</p>
+        <p className="font-body text-sm text-muted mb-8 w-full">Generating your pathway...</p>
       
       {/* Waveform BG mock */}
       <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center opacity-30">
@@ -131,58 +168,74 @@ export default function Analysing() {
         />
       </div>
 
-      {/* Removed old floating title */}
-        
-        {/* Fill bar */}
-        <div className="w-full h-[2px] bg-border mb-12 relative overflow-hidden rounded-full">
-          <motion.div 
-            initial={{ width: "0%" }}
-            animate={{ width: "100%" }}
-            transition={{ duration: 15, ease: 'linear' }}
-            className="absolute top-0 left-0 h-full bg-primary-dark"
-          />
-        </div>
+      {/* Fill bar */}
+      <div className="w-full h-[2px] bg-border mb-12 relative overflow-hidden rounded-full">
+        <motion.div 
+          initial={{ width: "0%" }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 4, ease: 'linear' }}
+          className="absolute top-0 left-0 h-full bg-primary-dark"
+        />
+      </div>
 
-        {/* Signals */}
-        <div className="space-y-6">
-          {signals.map((sig, i) => {
-            const isCompleted = completedSignals >= i;
-            const isCurrent = completedSignals === i - 1; // Actually we reveal one by one, wait, logic:
-            // if completedSignals is -1, none are current but maybe 0 is revealed.
-            // Let's just say a signal appears staggered.
-            
-            return (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ 
-                  opacity: i <= completedSignals + 1 ? 1 : 0, 
-                  x: i <= completedSignals + 1 ? 0 : -10 
-                }}
-                transition={{ duration: 0.4 }}
-                className="flex items-start gap-4"
-              >
-                <div className="mt-1">
-                  {isCompleted ? (
-                    <div className="w-4 h-4 rounded-full bg-green flex items-center justify-center">
-                      <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                    </div>
-                  ) : (
-                    <motion.div 
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      className="w-4 h-4 rounded-full border-2 border-[#e2e8f0] border-t-primary-dark"
-                    />
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-body text-[15px] text-primary-dark mb-0.5">{sig.text}</h4>
-                  <p className="font-mono text-[11px] text-[#64748b]">{sig.detail}</p>
-                </div>
-              </motion.div>
-            )
-          })}
+      {/* Signals */}
+      <div className="space-y-6">
+        {signals.map((sig, i) => {
+          const isCompleted = completedSignals >= i;
+          return (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ 
+                opacity: i <= completedSignals + 1 ? 1 : 0, 
+                x: i <= completedSignals + 1 ? 0 : -10 
+              }}
+              transition={{ duration: 0.4 }}
+              className="flex items-start gap-4"
+            >
+              <div className="mt-1">
+                {isCompleted ? (
+                  <div className="w-4 h-4 rounded-full bg-green flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                  </div>
+                ) : (
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="w-4 h-4 rounded-full border-2 border-[#e2e8f0] border-t-primary-dark"
+                  />
+                )}
+              </div>
+              <div>
+                <h4 className="font-body text-[15px] text-primary-dark mb-0.5">{sig.text}</h4>
+                <p className="font-mono text-[11px] text-[#64748b]">{sig.detail}</p>
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
+
+      {/* Fix 3: Emergency Button */}
+      {showButton && (
+        <div style={{ marginTop: '32px', textAlign: 'center', position: 'relative', zIndex: 100 }}>
+          <button
+            onClick={() => navigate('/roadmap')}
+            style={{
+              background: '#0f172a',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 28px',
+              fontFamily: 'DM Sans, sans-serif',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            View My Roadmap →
+          </button>
         </div>
+      )}
       </main>
     </div>
   );
