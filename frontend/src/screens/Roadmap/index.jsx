@@ -69,29 +69,46 @@ export default function Roadmap() {
     const fetchSession = async () => {
       if (!user) return
       try {
-        setLoading(true)
+        setLoading(true);
         let query = supabase
           .from('onboarding_sessions')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id);
 
         if (sessionId) {
-          query = query.eq('id', sessionId)
+          query = query.eq('id', sessionId);
         } else {
-          query = query.order('created_at', { ascending: false }).limit(1)
+          query = query.eq('status', 'completed').order('created_at', { ascending: false }).limit(1);
         }
 
-        const { data, error } = await query.single()
+        const fetchPromise = query.maybeSingle();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
+        
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
-        if (error) {
-          setError('No roadmap found. Please complete an assessment first.')
-          setLoading(false)
-          return
+        if (!data || error) {
+          // Try in_progress sessions too
+          const { data: inProgress } = await supabase
+            .from('onboarding_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (inProgress) {
+            setSession(inProgress);
+            setPathway(inProgress.learning_pathway || []);
+          } else {
+            setError('No roadmap found. Please complete an assessment first.');
+          }
+          setLoading(false);
+          return;
         }
 
-        setSession(data)
-        setPathway(data?.learning_pathway || [])
-        setLoading(false)
+        setSession(data);
+        setPathway(data?.learning_pathway || []);
+        setLoading(false);
 
       } catch (err) {
         setError('Failed to load roadmap. Please try again.')

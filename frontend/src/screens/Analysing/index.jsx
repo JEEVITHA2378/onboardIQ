@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routes';
 import { useOnboard } from '../../context/OnboardContext';
 import { Navbar } from '../../components/Navbar';
+import { generatePathway } from '../../services/api';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 import { Check } from 'lucide-react';
 
 const signals = [
@@ -17,23 +20,99 @@ const signals = [
 
 export default function Analysing() {
   const navigate = useNavigate();
-  const { pathway } = useOnboard();
+  const { pathway, setPathway, sessionId } = useOnboard();
   const [completedSignals, setCompletedSignals] = useState(-1);
 
+  const { user } = useAuth();
+
+  // Mock pathway for when backend is unavailable
+  const getMockPathway = () => [
+    {
+      id: 'module-1',
+      title: 'Core Fundamentals',
+      skill_taught: 'fundamentals',
+      level: 'beginner',
+      duration_minutes: 30,
+      domain: 'technical',
+      reasoning: `This module was added because gaps were identified during your simulation tasks.`
+    },
+    {
+      id: 'module-2',
+      title: 'Advanced Concepts',
+      skill_taught: 'advanced',
+      level: 'intermediate',
+      duration_minutes: 45,
+      domain: 'technical',
+      reasoning: `This module addresses the skill gaps observed in your task performance.`
+    }
+  ];
+
   useEffect(() => {
+    const handleGeneratePathway = async () => {
+      if (!sessionId || !user) {
+        setTimeout(() => {
+          navigate(ROUTES.ROADMAP);
+        }, 15000);
+        return;
+      }
+      try {
+        // Call backend to generate pathway
+        const response = await generatePathway(sessionId);
+
+        const newPathway = response?.data?.learning_pathway || response?.data?.modules || [];
+        const reasoningTrace = response?.data?.reasoning_trace || response?.data?.reasoning || [];
+        const readinessScore = response?.data?.job_readiness_score || 72;
+
+        setPathway(response.data);
+
+        // Save pathway to Supabase
+        await supabase
+          .from('onboarding_sessions')
+          .update({
+            learning_pathway: newPathway,
+            reasoning_trace: reasoningTrace,
+            job_readiness_score: readinessScore,
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sessionId)
+          .eq('user_id', user.id);
+
+        // Navigate to roadmap after saving
+        setTimeout(() => {
+          navigate(ROUTES.ROADMAP);
+        }, 3000);
+
+      } catch (err) {
+        console.error('Pathway generation failed:', err);
+        // Even if backend fails navigate to roadmap with mock data so user sees something
+        await supabase
+          .from('onboarding_sessions')
+          .update({
+            learning_pathway: getMockPathway(),
+            job_readiness_score: 72,
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sessionId)
+          .eq('user_id', user.id);
+
+        setTimeout(() => navigate(ROUTES.ROADMAP), 3000);
+      }
+    };
+
+    handleGeneratePathway();
+
     // Reveal signals staggered
     let idx = 0;
     const interval = setInterval(() => {
       setCompletedSignals(idx);
       idx++;
-      if (idx >= signals.length) {
-        clearInterval(interval);
-        setTimeout(() => navigate(ROUTES.ROADMAP), 2000);
-      }
-    }, 2500); // 2.5s * 6 = 15 seconds
+      if (idx >= signals.length) clearInterval(interval);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [navigate]);
+  }, [navigate, sessionId, user, setPathway]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center relative overflow-hidden">

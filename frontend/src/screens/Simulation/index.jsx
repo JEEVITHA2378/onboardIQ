@@ -8,9 +8,13 @@ import Editor from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navbar } from '../../components/Navbar';
 
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
+
 export default function Simulation() {
-  const { simulationTasks, setPathway } = useOnboard();
+  const { simulationTasks, setPathway, sessionId } = useOnboard();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [currentTaskIdx, setCurrentTaskIdx] = useState(0);
   const [code, setCode] = useState('// Write your solution here\n');
@@ -61,25 +65,47 @@ export default function Simulation() {
     } else {
       setSubmitting(true);
       try {
-        const payload = {
-          session_id: "demo-session",
-          task_id: task.id,
-          code_submitted: code,
-          telemetry: { time_spent_seconds: 120, keystrokes: 450, hints: hintsRequested }
-        };
-        const res = await submitSimulation(payload);
-        setPathway(res.data);
-      } catch (e) {
-        // Mock fallback pathway for demo
-        setPathway({
-          modules: [
-            { id: "mod1", title: "Advanced Node.js Identity & Access Management", duration_minutes: 45, level: "advanced", skill_taught: "Authentication" },
-            { id: "mod2", title: "GraphQL API Design", duration_minutes: 60, level: "intermediate", skill_taught: "API Design" }
-          ],
-          gap_skills: ["Authentication", "API Design"],
-          reasoning: ["Observed incorrect usage of JWT signing in task 1.", "Failed to properly scope database queries in task 2."]
+        const telemetryLog = [{
+          task_id: task.id || "fallback",
+          time_spent_seconds: 120,
+          hints_requested: hintsRequested,
+          errors_made: 0,
+          retry_count: 0,
+          task_abandoned: false,
+          submitted_answer: code
+        }];
+
+        // POST telemetry to backend
+        const response = await submitSimulation({
+          session_id: sessionId || "demo-session",
+          user_id: user.id || "demo-user",
+          telemetry: telemetryLog
         });
-      } finally {
+
+        // Save session to Supabase with completed status
+        const { error } = await supabase
+          .from('onboarding_sessions')
+          .upsert({
+            id: sessionId || "demo-session",
+            user_id: user.id,
+            status: 'completed',
+            telemetry_log: telemetryLog,
+            job_readiness_score: response?.data?.readiness_score || 72,
+            skills_proven: response?.data?.skills_proven || [],
+            skill_gaps: response?.data?.skill_gaps || [],
+            learning_pathway: response?.data?.pathway || [],
+            reasoning_trace: response?.data?.reasoning_trace || [],
+            time_saved_hours: response?.data?.time_saved_hours || 0,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Failed to save session:', error);
+        }
+
+        navigate(ROUTES.ANALYSING);
+      } catch (err) {
+        console.error('Final submit failed:', err);
         navigate(ROUTES.ANALYSING);
       }
     }

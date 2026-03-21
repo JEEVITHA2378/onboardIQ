@@ -26,7 +26,7 @@ def get_supabase():
         return _supabase_client
 
     url = os.getenv("SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_KEY", "")
+    key = os.getenv("SUPABASE_SERVICE_KEY", os.getenv("SUPABASE_KEY", ""))
 
     if url and key and not url.startswith("https://your-"):
         try:

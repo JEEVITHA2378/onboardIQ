@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/Navbar';
 import { Button } from '../../components/Button';
 import { ROUTES } from '../../constants/routes';
-import { ingestResume } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { ingestResume, getSimulationTasks } from '../../services/api';
 import { useOnboard } from '../../context/OnboardContext';
 import { FileText, Briefcase, CheckCircle2 } from 'lucide-react';
+import { FileText, Briefcase, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function Upload() {
   const navigate = useNavigate();
-  const { setSimulationTasks } = useOnboard();
+  const { setSimulationTasks, setSessionId } = useOnboard();
+  const { user } = useAuth();
   
   const [resume, setResume] = useState(null);
   const [jd, setJd] = useState(null);
@@ -29,19 +33,59 @@ export default function Upload() {
     const formData = new FormData();
     formData.append('resume', resume);
     formData.append('job_description', jd);
+    formData.append('user_id', user.id);
 
     try {
-      const resp = await ingestResume(formData);
-      setSimulationTasks(resp.data.tasks);
+      let extractedData = {};
+      try {
+        const resp = await ingestResume(formData);
+        extractedData = resp.data;
+      } catch (err) {
+        console.error('Backend ingest failed:', err);
+        // Use fallback data if backend is down
+        extractedData = {
+          role_title: 'Software Engineer',
+          role_category: 'technical',
+          session_id: crypto.randomUUID()
+        };
+      }
+
+      // Create session in Supabase immediately
+      const newSessionId = extractedData.session_id || crypto.randomUUID();
+
+      const { error } = await supabase
+        .from('onboarding_sessions')
+        .insert({
+          id: newSessionId,
+          user_id: user.id,
+          role_title: extractedData.role_title || 'Software Engineer',
+          role_category: extractedData.role_category || 'technical',
+          status: 'in_progress',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Session creation failed:', error);
+      }
+
+      // Save to context
+      setSessionId(newSessionId);
+      
+      try {
+        const tasksResp = await getSimulationTasks(newSessionId);
+        setSimulationTasks(tasksResp.data?.tasks || []);
+      } catch (e) {
+        setSimulationTasks([
+          { id: "task_1", title: "API Endpoint Debugging", type: "code", description: "The `/users` endpoint is returning a 500 error when filtering by age. Review the logic and fix the bug to restore correct pagination and filtering." },
+          { id: "task_2", title: "Architecture Decision Record", type: "text", description: "Draft a brief ADR explaining why we should migrate from REST to GraphQL for the new notification service." }
+        ]);
+      }
+      
       setTimeout(() => navigate(ROUTES.SIMULATION), 1000);
-    } catch (e) {
-      console.error(e);
-      // Fallback for demo
-      setSimulationTasks([
-        { id: "task_1", title: "API Endpoint Debugging", type: "code", description: "The `/users` endpoint is returning a 500 error when filtering by age. Review the logic and fix the bug to restore correct pagination and filtering." },
-        { id: "task_2", title: "Architecture Decision Record", type: "text", description: "Draft a brief ADR explaining why we should migrate from REST to GraphQL for the new notification service." }
-      ]);
-      setTimeout(() => navigate(ROUTES.SIMULATION), 1000);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setLoading(false);
     }
   };
 

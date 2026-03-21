@@ -80,11 +80,17 @@ export default function Sessions() {
       if (!user) return
       try {
         setLoading(true)
-        const { data, error } = await supabase
+        
+        const fetchPromise = supabase
           .from('onboarding_sessions')
           .select('*')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
+          .in('status', ['completed', 'in_progress'])
+          .order('created_at', { ascending: false });
+          
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
+        
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise])
 
         if (error) throw error
         setSessions(data || [])

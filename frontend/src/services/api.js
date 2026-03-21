@@ -8,13 +8,21 @@ const api = axios.create({
 });
 
 export const ingestResume = async (formData) => {
-  return await api.post('/api/ingest/resume', formData, {
+  return await api.post('/api/ingest', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
 
+export const getSimulationTasks = async (sessionId) => {
+  return await api.get(`/api/simulation-tasks/${sessionId}`);
+};
+
 export const submitSimulation = async (payload) => {
-  return await api.post('/api/simulation/submit', payload);
+  return await api.post('/api/submit-observation', payload);
+};
+
+export const generatePathway = async (sessionId) => {
+  return await api.get(`/api/generate-pathway/${sessionId}`);
 };
 
 export default api;

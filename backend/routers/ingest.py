@@ -16,7 +16,7 @@ router = APIRouter()
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_documents(
     user_id: str = Form(...),
-    jd_text: str = Form(...),
+    job_description: UploadFile = File(...),
     resume: UploadFile = File(...)
 ):
     print(f"Ingesting docs for user: {user_id}")
@@ -26,8 +26,16 @@ async def ingest_documents(
         resume_bytes = await resume.read()
         parsed_resume = parse_resume(resume_bytes)
         
-        print("Parsing JD text...")
-        parsed_jd = parse_jd(jd_text)
+        print("Parsing JD file...")
+        jd_bytes = await job_description.read()
+        try:
+            parsed_jd = parse_resume(jd_bytes) # Try PDF parse first
+            if not parsed_jd.strip():
+                parsed_jd = jd_bytes.decode()
+        except:
+            parsed_jd = jd_bytes.decode('utf-8', errors='ignore')
+            
+        parsed_jd = parse_jd(parsed_jd)
         
         # 2. Extract Skills (Claude API)
         print("Extracting skills via AI...")
