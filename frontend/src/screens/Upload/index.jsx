@@ -12,7 +12,7 @@ import { supabase } from '../../lib/supabaseClient';
 
 export default function Upload() {
   const navigate = useNavigate();
-  const { setSimulationTasks, setSessionId } = useOnboard();
+  const { setSimulationTasks, setSessionId, setRoleTitle, setRoleCategory } = useOnboard();
   const { user } = useAuth();
   
   const [resume, setResume] = useState(null);
@@ -35,41 +35,50 @@ export default function Upload() {
     formData.append('user_id', user.id);
 
     try {
-      let extractedData = {};
+      // Generate session ID upfront
+      const newSessionId = crypto.randomUUID();
+
+      // Try backend ingest
+      let roleTitle = 'Software Engineer';
+      let roleCategory = 'technical';
       try {
         const resp = await ingestResume(formData);
-        extractedData = resp.data;
+        roleTitle = resp.data?.role_title || 'Software Engineer';
+        roleCategory = resp.data?.role_category || 'technical';
       } catch (err) {
-        console.error('Backend ingest failed:', err);
-        // Use fallback data if backend is down
-        extractedData = {
-          role_title: 'Software Engineer',
-          role_category: 'technical',
-          session_id: crypto.randomUUID()
-        };
+        console.log('Backend ingest failed, using defaults');
       }
 
-      // Create session in Supabase immediately
-      const newSessionId = extractedData.session_id || crypto.randomUUID();
-
+      // Save session to Supabase immediately with ALL columns filled
       const { error } = await supabase
         .from('onboarding_sessions')
         .insert({
           id: newSessionId,
           user_id: user.id,
-          role_title: extractedData.role_title || 'Software Engineer',
-          role_category: extractedData.role_category || 'technical',
+          role_title: roleTitle,
+          role_category: roleCategory,
           status: 'in_progress',
+          job_readiness_score: 0,
+          skills_proven: [],
+          skill_gaps: [],
+          learning_pathway: [],
+          reasoning_trace: [],
+          time_saved_hours: 0,
           created_at: new Date().toISOString()
         });
 
       if (error) {
         console.error('Session creation failed:', error);
+      } else {
+        console.log('Session created in Supabase:', newSessionId);
       }
 
-      // Save to context
+      // Save to context (persisted to localStorage)
       setSessionId(newSessionId);
+      setRoleTitle(roleTitle);
+      setRoleCategory(roleCategory);
       
+      // Try to fetch simulation tasks
       try {
         const tasksResp = await getSimulationTasks(newSessionId);
         setSimulationTasks(tasksResp.data?.tasks || []);

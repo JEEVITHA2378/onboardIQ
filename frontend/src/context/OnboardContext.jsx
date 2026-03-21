@@ -7,15 +7,50 @@ export const OnboardProvider = ({ children }) => {
   const [jdData, setJdData] = useState(null);
   const [simulationTasks, setSimulationTasks] = useState([]);
   const [pathway, setPathway] = useState(null);
-  const [sessionId, setSessionId] = useState(null); // Newly added for end-to-end tracking
-  
+
+  // Persist sessionId to localStorage so it survives navigation
+  const [sessionId, setSessionIdState] = useState(() => {
+    return localStorage.getItem('onboardiq_session_id') || null;
+  });
+
+  const setSessionId = (id) => {
+    setSessionIdState(id);
+    if (id) {
+      localStorage.setItem('onboardiq_session_id', id);
+    } else {
+      localStorage.removeItem('onboardiq_session_id');
+    }
+  };
+
+  // Persist roleTitle
+  const [roleTitle, setRoleTitleState] = useState(() => {
+    return localStorage.getItem('onboardiq_role_title') || 'Software Engineer';
+  });
+
+  const setRoleTitle = (title) => {
+    setRoleTitleState(title);
+    if (title) localStorage.setItem('onboardiq_role_title', title);
+  };
+
+  // Persist roleCategory
+  const [roleCategory, setRoleCategoryState] = useState(() => {
+    return localStorage.getItem('onboardiq_role_category') || 'technical';
+  });
+
+  const setRoleCategory = (cat) => {
+    setRoleCategoryState(cat);
+    if (cat) localStorage.setItem('onboardiq_role_category', cat);
+  };
+
   return (
     <OnboardContext.Provider value={{
       resumeData, setResumeData,
       jdData, setJdData,
       simulationTasks, setSimulationTasks,
       pathway, setPathway,
-      sessionId, setSessionId
+      sessionId, setSessionId,
+      roleTitle, setRoleTitle,
+      roleCategory, setRoleCategory
     }}>
       {children}
     </OnboardContext.Provider>
