@@ -1,17 +1,21 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useOnboard } from '../context/OnboardContext'
 
 export const Navbar = () => {
   const { user, profile, signOut } = useAuth()
+  const { clearSession } = useOnboard()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
     try {
+      clearSession()
       await signOut()
       navigate('/login')
     } catch (err) {
       console.error('Sign out error:', err)
+      clearSession()
       navigate('/login') // fallback
     }
   }

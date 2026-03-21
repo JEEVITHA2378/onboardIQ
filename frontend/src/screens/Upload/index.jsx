@@ -35,54 +35,43 @@ export default function Upload() {
     formData.append('user_id', user.id);
 
     try {
-      // Generate session ID upfront
-      const newSessionId = crypto.randomUUID();
+      // 1. Call backend ingest first
+      const resp = await ingestResume(formData);
+      const sessionIdFromBackend = resp.data?.session_id;
+      const roleTitle = resp.data?.role_title || 'Software Engineer';
+      const roleCategory = resp.data?.role_category || 'technical';
 
-      // Try backend ingest
-      let roleTitle = 'Software Engineer';
-      let roleCategory = 'technical';
-      try {
-        const resp = await ingestResume(formData);
-        roleTitle = resp.data?.role_title || 'Software Engineer';
-        roleCategory = resp.data?.role_category || 'technical';
-      } catch (err) {
-        console.log('Backend ingest failed, using defaults');
+      if (!sessionIdFromBackend) {
+        throw new Error('Backend did not return a session ID');
       }
 
-      // Save session to Supabase immediately with ALL columns filled
-      const { error } = await supabase
-        .from('onboarding_sessions')
-        .insert({
-          id: newSessionId,
-          user_id: user.id,
-          role_title: roleTitle,
-          role_category: roleCategory,
-          status: 'in_progress',
-          job_readiness_score: 0,
-          skills_proven: [],
-          skill_gaps: [],
-          learning_pathway: [],
-          reasoning_trace: [],
-          time_saved_hours: 0,
-          created_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('Session creation failed:', error);
-      } else {
-        console.log('Session created in Supabase:', newSessionId);
-      }
-
-      // Save to context (persisted to localStorage)
-      setSessionId(newSessionId);
+      // 2. Save to context (persisted to localStorage)
+      setSessionId(sessionIdFromBackend);
       setRoleTitle(roleTitle);
       setRoleCategory(roleCategory);
       
-      // Try to fetch simulation tasks
+      // 3. Ensure a stub exists in Supabase for this session
+      // This is vital for local dev where backend might not have Supabase access
       try {
-        const tasksResp = await getSimulationTasks(newSessionId);
+        console.log('🔄 Creating session stub in Supabase...');
+        await supabase.from('onboarding_sessions').insert([{
+             id: sessionIdFromBackend,
+             user_id: user.id,
+             role_title: roleTitle,
+             role_category: roleCategory,
+             status: 'in_progress',
+             created_at: new Date().toISOString()
+        }]);
+      } catch (stubErr) {
+        console.warn('⚠️ Could not create session stub (might already exist):', stubErr);
+      }
+      
+      // 4. Try to fetch simulation tasks using the CORRECT ID
+      try {
+        const tasksResp = await getSimulationTasks(sessionIdFromBackend);
         setSimulationTasks(tasksResp.data?.tasks || []);
       } catch (e) {
+        console.error('Task generation failed, using fallbacks', e);
         setSimulationTasks([
           { id: "task_1", title: "API Endpoint Debugging", type: "code", description: "The `/users` endpoint is returning a 500 error when filtering by age. Review the logic and fix the bug to restore correct pagination and filtering." },
           { id: "task_2", title: "Architecture Decision Record", type: "text", description: "Draft a brief ADR explaining why we should migrate from REST to GraphQL for the new notification service." }

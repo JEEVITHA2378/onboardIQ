@@ -42,6 +42,14 @@ export const OnboardProvider = ({ children }) => {
     if (cat) localStorage.setItem('onboardiq_role_category', cat);
   };
 
+  const clearSession = () => {
+    setSessionId(null);
+    setPathway(null);
+    setSimulationTasks([]);
+    setResumeData(null);
+    setJdData(null);
+  };
+
   return (
     <OnboardContext.Provider value={{
       resumeData, setResumeData,
@@ -50,7 +58,8 @@ export const OnboardProvider = ({ children }) => {
       pathway, setPathway,
       sessionId, setSessionId,
       roleTitle, setRoleTitle,
-      roleCategory, setRoleCategory
+      roleCategory, setRoleCategory,
+      clearSession
     }}>
       {children}
     </OnboardContext.Provider>

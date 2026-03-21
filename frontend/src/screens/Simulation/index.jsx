@@ -90,6 +90,13 @@ export default function Simulation() {
     } else {
       // All tasks done — submit and navigate
       setSubmitting(true);
+      
+      // Safety timeout: navigate anyway after 10 seconds if backend is slow
+      const safetyNav = setTimeout(() => {
+        console.log('Force navigating due to timeout');
+        navigate(ROUTES.ANALYSING);
+      }, 10000);
+
       try {
         // POST telemetry to backend
         await submitSimulation({
@@ -100,25 +107,32 @@ export default function Simulation() {
 
         // Save session to Supabase with completed status
         if (user?.id && sessionId) {
-          await supabase
-            .from('onboarding_sessions')
-            .update({
-              status: 'completed',
-              job_readiness_score: 72,
-              skills_proven: ['Communication', 'Problem Solving'],
-              skill_gaps: ['Python', 'System Design', 'SQL']
-            })
-            .eq('id', sessionId)
-            .eq('user_id', user.id);
+          try {
+            await supabase
+              .from('onboarding_sessions')
+              .update({
+                status: 'completed'
+              })
+              .eq('id', sessionId)
+              .eq('user_id', user.id);
+          } catch (dbErr) {
+            console.error('Supabase update failed:', dbErr);
+          }
         }
 
+        clearTimeout(safetyNav);
         navigate(ROUTES.ANALYSING);
       } catch (err) {
         console.error('Final submit failed:', err);
+        clearTimeout(safetyNav);
         navigate(ROUTES.ANALYSING);
+      } finally {
+        setSubmitting(false);
       }
     }
   };
+
+  const isLastTask = currentTaskIdx === tasks.length - 1;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -221,8 +235,15 @@ export default function Simulation() {
                 >
                   Need a hint?
                 </button>
-                <Button onClick={handleNext} disabled={submitting} className="px-8 rounded-lg">
-                  Submit →
+                <Button onClick={handleNext} disabled={submitting} className="px-8 rounded-lg min-w-[140px]">
+                  {submitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Submitting...</span>
+                    </div>
+                  ) : (
+                    isLastTask ? 'Finish Assessment →' : 'Next Task →'
+                  )}
                 </Button>
               </div>
             </motion.div>

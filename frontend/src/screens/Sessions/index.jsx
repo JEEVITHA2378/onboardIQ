@@ -225,37 +225,39 @@ export default function Sessions() {
                     fontFamily: 'JetBrains Mono, monospace',
                     fontSize: '11px', fontWeight: '600',
                     padding: '2px 10px', borderRadius: '4px',
-                    background: session.status === 'completed'
-                      ? '#dcfce7' : '#fef9c3',
-                    color: session.status === 'completed'
-                      ? '#166534' : '#854d0e'
+                    background: (session.status === 'completed' || session.learning_pathway?.length > 0)
+                      ? '#dcfce7' : session.status === 'analyzing' ? '#e0f2fe' : '#fef9c3',
+                    color: (session.status === 'completed' || session.learning_pathway?.length > 0)
+                      ? '#166534' : session.status === 'analyzing' ? '#075985' : '#854d0e'
                   }}>
-                    {session.status === 'completed'
-                      ? 'COMPLETED' : 'IN PROGRESS'}
+                    {(session.status === 'completed' || session.learning_pathway?.length > 0)
+                      ? 'COMPLETED' : session.status === 'analyzing' ? 'ANALYZING' : 'IN PROGRESS'}
                   </span>
                 </div>
               </div>
               <button
+                disabled={session.status === 'analyzing'}
                 onClick={() => navigate(
-                  session.status === 'completed'
-                    ? '/dashboard' : '/simulation'
+                  (session.status === 'completed' || session.learning_pathway?.length > 0)
+                    ? `/dashboard?session=${session.id}` : '/simulation'
                 )}
                 style={{
-                  background: session.status === 'completed'
-                    ? '#0f172a' : '#ffffff',
-                  color: session.status === 'completed'
-                    ? '#ffffff' : '#0f172a',
-                  border: session.status === 'completed'
+                  background: (session.status === 'completed' || session.learning_pathway?.length > 0)
+                    ? '#0f172a' : session.status === 'analyzing' ? '#f1f5f9' : '#ffffff',
+                  color: (session.status === 'completed' || session.learning_pathway?.length > 0)
+                    ? '#ffffff' : session.status === 'analyzing' ? '#94a3b8' : '#0f172a',
+                  border: (session.status === 'completed' || session.learning_pathway?.length > 0) || session.status === 'analyzing'
                     ? 'none' : '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '10px 20px',
                   fontFamily: 'DM Sans, sans-serif',
                   fontSize: '14px', fontWeight: '500',
-                  cursor: 'pointer', whiteSpace: 'nowrap'
+                  cursor: session.status === 'analyzing' ? 'not-allowed' : 'pointer', 
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {session.status === 'completed'
-                  ? 'View Results' : 'Resume Session'}
+                {(session.status === 'completed' || session.learning_pathway?.length > 0)
+                  ? 'View Results' : session.status === 'analyzing' ? 'Analyzing...' : 'Resume Session'}
               </button>
             </div>
           ))

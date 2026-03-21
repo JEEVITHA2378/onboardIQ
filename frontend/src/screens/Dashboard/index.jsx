@@ -212,10 +212,10 @@ export default function Dashboard() {
         
         {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card label="Job Readiness" target={mockData.readiness} suffix="%" color="#0ea5e9" />
-          <Card label="Modules in Path" target={mockData.modules} color="#0f172a" />
-          <Card label="Modules Skipped" target={mockData.skipped} color="#10b981" />
-          <Card label="Days to Role Ready" target={mockData.daysToReady} color="#f59e0b" />
+          <Card label="Job Readiness" target={dashboardData?.job_readiness_score || mockData.readiness} suffix="%" color="#0ea5e9" />
+          <Card label="Modules in Path" target={dashboardData?.learning_pathway?.length || mockData.modules} color="#0f172a" />
+          <Card label="Modules Skipped" target={dashboardData?.modules_skipped || mockData.skipped} color="#10b981" />
+          <Card label="Days to Role Ready" target={dashboardData?.days_to_ready || mockData.daysToReady} color="#f59e0b" />
         </div>
 
         {/* Charts Row */}
@@ -274,18 +274,27 @@ export default function Dashboard() {
           </div>
           
           <div className="p-4 flex flex-col gap-2">
-            {mockData.traces.filter(t => filter === 'All' || t.type === filter).map(trace => {
-              const open = expandedTrace[trace.id];
+            {(dashboardData?.reasoning_trace || mockData.traces).filter(t => filter === 'All' || t.type === filter || !t.type).map((trace, idx) => {
+              const traceId = trace.id || `trace-${idx}`;
+              const open = expandedTrace[traceId];
+              const title = trace.title || trace.module_title || "Analysis Detail";
+              const description = trace.desc || trace.explanation || "";
+              
               return (
-                <div key={trace.id} className="border border-border rounded-[8px] overflow-hidden">
+                <div key={traceId} className="border border-border rounded-[8px] overflow-hidden">
                   <div 
-                    onClick={() => setExpandedTrace(p => ({ ...p, [trace.id]: !p[trace.id] }))}
+                    onClick={() => setExpandedTrace(p => ({ ...p, [traceId]: !p[traceId] }))}
                     className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#f8fafc] transition-colors"
                   >
-                    <div className="font-body text-[14px] text-primary-dark font-medium">{trace.title}</div>
+                    <div className="font-body text-[14px] text-primary-dark font-medium">{title}</div>
                     <div className="flex items-center gap-4">
+                      {trace.type && (
+                        <div className="px-2 py-0.5 rounded-[4px] font-mono text-[10px] uppercase bg-slate-100 text-slate-600">
+                          {trace.type}
+                        </div>
+                      )}
                       <div className={`px-2 py-0.5 rounded-[4px] font-mono text-[10px] uppercase ${trace.diff === 'hard' ? 'bg-[#fee2e2] text-[#991b1b]' : trace.diff === 'medium' ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#dcfce7] text-[#166534]'}`}>
-                        {trace.diff}
+                        {trace.diff || 'Info'}
                       </div>
                       {open ? <ChevronUp className="w-5 h-5 text-muted" /> : <ChevronDown className="w-5 h-5 text-muted" />}
                     </div>
@@ -298,7 +307,7 @@ export default function Dashboard() {
                           <div className="border border-border bg-[#f8fafc] rounded-[8px] p-4 relative overflow-hidden">
                             <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#0ea5e9]" />
                             <p className="font-body text-[14px] italic text-[#64748b] m-0 leading-relaxed">
-                              "{trace.desc}"
+                              "{description}"
                             </p>
                           </div>
                         </div>

@@ -25,19 +25,13 @@ export default function Analysing() {
   const { user } = useAuth();
   const [showButton, setShowButton] = useState(false);
 
-  // Fix 1: Force navigate after 4 seconds
-  useEffect(() => {
-    const forceNavigate = setTimeout(() => {
-      navigate('/roadmap');
-    }, 4000);
-    return () => clearTimeout(forceNavigate);
-  }, [navigate]);
+  // Removed force-navigate timer — it was racing with the async analysis
 
-  // Fix 3: Show emergency button after 5 seconds
+  // Show emergency button after 8 seconds as a true fallback
   useEffect(() => {
     const buttonTimer = setTimeout(() => {
       setShowButton(true);
-    }, 5000);
+    }, 8000);
     return () => clearTimeout(buttonTimer);
   }, []);
 
@@ -101,49 +95,33 @@ export default function Analysing() {
             job_readiness_score: readinessScore
         });
 
-        // Save to Supabase
+        // CRITICAL SYNC: Ensure Supabase has the final results
+        // This acts as a bridge if the backend is using in-memory fallbacks
         if (user && sessionId) {
           try {
-            // Try update first (session should already exist from Upload)
-            const { error } = await supabase
+            console.log('🔄 Syncing assessment results to Supabase...');
+            const { error: updateError } = await supabase
               .from('onboarding_sessions')
               .update({
                 learning_pathway: pathway,
-                reasoning_trace: reasoningTrace,
+                status: 'completed',
                 job_readiness_score: readinessScore,
-                skills_proven: ['Communication', 'Problem Solving'],
-                skill_gaps: ['Python', 'System Design', 'SQL'],
-                time_saved_hours: 142,
-                status: 'completed'
+                reasoning_trace: reasoningTrace,
+                completed_at: new Date().toISOString()
               })
-              .eq('id', sessionId)
-              .eq('user_id', user.id);
-
-            if (error) {
-              console.error('Supabase update error, trying upsert:', error);
-              // Fallback to upsert if update fails (e.g. row doesn't exist)
-              await supabase
-                .from('onboarding_sessions')
-                .upsert({
-                  id: sessionId,
-                  user_id: user.id,
-                  role_title: roleTitle || 'Software Engineer',
-                  role_category: roleCategory || 'technical',
-                  learning_pathway: pathway,
-                  reasoning_trace: reasoningTrace,
-                  job_readiness_score: readinessScore,
-                  skills_proven: ['Communication', 'Problem Solving'],
-                  skill_gaps: ['Python', 'System Design', 'SQL'],
-                  time_saved_hours: 142,
-                  status: 'completed'
-                });
+              .eq('id', sessionId);
+            
+            if (updateError) {
+              console.warn('⚠️ Supabase sync failed, results only in context:', updateError);
+            } else {
+              console.log('✅ Supabase sync complete');
             }
-            console.log('Session saved to Supabase successfully');
-          } catch (dbErr) {
-            console.error('Database save failed:', dbErr);
+          } catch (syncErr) {
+            console.error('❌ Sync error:', syncErr);
           }
         }
 
+        console.log('Analysis completed');
       } catch (err) {
         console.error('Analysis failed:', err);
       } finally {
@@ -153,7 +131,7 @@ export default function Analysing() {
 
     const timer = setTimeout(() => {
       runAnalysis();
-    }, 3500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [user, sessionId, roleTitle, roleCategory, navigate, setPathway]);

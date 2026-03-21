@@ -30,12 +30,18 @@ def get_supabase():
 
     if url and key and not url.startswith("https://your-"):
         try:
-            from supabase import create_client
-            _supabase_client = create_client(url, key)
+            from supabase import create_client, ClientOptions
+            # Explicitly set options to avoid 'proxy' kwarg conflict in internal library calls
+            options = ClientOptions(
+                postgrest_client_timeout=10,
+                storage_client_timeout=10
+            )
+            _supabase_client = create_client(url, key, options=options)
             print("✅ Supabase client initialized")
             return _supabase_client
         except Exception as e:
             print(f"⚠️  Supabase init failed: {e}. Using in-memory storage.")
+            # Fallback: track the error it might still be there but we tried to isolate it
             return None
     else:
         print("ℹ️  Supabase not configured. Using in-memory storage.")
