@@ -46,12 +46,12 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: window.location.origin + '/dashboard'
         }
       })
       if (error) throw error
     } catch (err) {
-      setError(err.message || 'Google sign in failed. Please try again.')
+      setError(err.message || 'Google sign in failed')
       setGoogleLoading(false)
     }
   };
