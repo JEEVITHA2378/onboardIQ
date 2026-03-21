@@ -66,57 +66,48 @@ export default function Roadmap() {
   const [activeView, setActiveView] = useState('Timeline View')
 
   useEffect(() => {
-    const fetchSession = async () => {
-      if (!user) return
+    const fetchRoadmap = async () => {
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
       try {
-        setLoading(true);
+        // Get latest session (prefer completed, fallback to any)
         let query = supabase
           .from('onboarding_sessions')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
 
         if (sessionId) {
-          query = query.eq('id', sessionId);
-        } else {
-          query = query.eq('status', 'completed').order('created_at', { ascending: false }).limit(1);
+          query = query.eq('id', sessionId)
         }
 
-        const fetchPromise = query.maybeSingle();
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
-        
-        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+        const { data, error } = await query
+          .order('created_at', { ascending: false })
+          .limit(1)
 
-        if (!data || error) {
-          // Try in_progress sessions too
-          const { data: inProgress } = await supabase
-            .from('onboarding_sessions')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        if (error) throw error
 
-          if (inProgress) {
-            setSession(inProgress);
-            setPathway(inProgress.learning_pathway || []);
-          } else {
-            setError('No roadmap found. Please complete an assessment first.');
-          }
-          setLoading(false);
-          return;
+        if (!data || data.length === 0) {
+          setError('No roadmap found. Please complete an assessment first.')
+          setLoading(false)
+          return
         }
 
-        setSession(data);
-        setPathway(data?.learning_pathway || []);
-        setLoading(false);
+        const latestSession = data[0]
+        console.log('Roadmap session loaded:', latestSession.id, latestSession.status)
+        setSession(latestSession)
+        setPathway(latestSession.learning_pathway || [])
+        setLoading(false)
 
       } catch (err) {
+        console.error('Roadmap fetch error:', err)
         setError('Failed to load roadmap. Please try again.')
         setLoading(false)
       }
     }
-    fetchSession()
-  }, [user, sessionId])
+    fetchRoadmap()
+  }, [user?.id, sessionId])
 
   // Loading state
   if (loading) {

@@ -77,31 +77,38 @@ export default function Sessions() {
 
   useEffect(() => {
     const fetchSessions = async () => {
-      if (!user) return
+      if (!user?.id) {
+        setLoading(false)
+        return
+      }
       try {
-        setLoading(true)
-        
-        const fetchPromise = supabase
+        const { data, error } = await supabase
           .from('onboarding_sessions')
           .select('*')
           .eq('user_id', user.id)
-          .in('status', ['completed', 'in_progress'])
-          .order('created_at', { ascending: false });
-          
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
-        
-        const { data, error } = await Promise.race([fetchPromise, timeoutPromise])
+          .order('created_at', { ascending: false })
 
-        if (error) throw error
-        setSessions(data || [])
+        if (error) {
+          console.error('Sessions fetch error:', error)
+          setSessions([])
+        } else {
+          console.log('Sessions fetched:', data?.length)
+          setSessions(data || [])
+        }
       } catch (err) {
-        console.error('Failed to fetch sessions:', err)
+        console.error('Sessions error:', err)
+        setSessions([])
       } finally {
         setLoading(false)
       }
     }
+
     fetchSessions()
-  }, [user])
+
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(fetchSessions, 10000)
+    return () => clearInterval(interval)
+  }, [user?.id])
 
   if (loading) {
     return (
